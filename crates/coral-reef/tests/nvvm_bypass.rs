@@ -232,6 +232,7 @@ fn nvvm_bypass_all_patterns_sm89() {
 #[test]
 fn nvvm_bypass_fma_policies_all_compile() {
     for policy in [FmaPolicy::Fused, FmaPolicy::Separate, FmaPolicy::Auto] {
+        let label = format!("{policy:?}");
         let opts = CompileOptions {
             target: GpuArch::Sm70.into(),
             opt_level: 2,
@@ -242,7 +243,7 @@ fn nvvm_bypass_fma_policies_all_compile() {
         let result = compile_wgsl_full(F64PRECISE_NOFMA_WGSL, &opts);
         assert!(
             result.is_ok(),
-            "SM70 FmaPolicy::{policy:?}: {}",
+            "SM70 FmaPolicy::{label}: {}",
             result.unwrap_err()
         );
         assert!(!result.unwrap().binary.is_empty());
