@@ -1,4 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+//! GPU instruction emitter trait.
+//!
+//! Defines the  trait — a builder pattern for emitting SSA
+//! instructions into the GPU codegen IR. Operations are grouped by type:
+//! shifts, rotates, float arithmetic, int arithmetic, bitwise, selection,
+//! type conversion, data movement, and memory operations.
+
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright © 2025-2026 ecoPrimals
 // Derived from Collabora, Ltd. (2022)
 
@@ -8,6 +16,8 @@ pub trait SSABuilder: Builder {
     fn alloc_ssa(&mut self, file: RegFile) -> SSAValue;
     fn alloc_ssa_vec(&mut self, file: RegFile, comps: u8) -> SSARef;
 
+
+    // ── Shift operations ────────────────────────────────────────────────
     fn shl(&mut self, x: Src, shift: Src) -> SSAValue {
         let dst = self.alloc_ssa(RegFile::GPR);
         if self.sm() >= 70 {
@@ -117,6 +127,8 @@ pub trait SSABuilder: Builder {
         dst
     }
 
+
+    // ── Rotate operations ───────────────────────────────────────────────
     fn urol(&mut self, x: Src, shift: Src) -> SSAValue {
         let dst = self.alloc_ssa(RegFile::GPR);
         assert!(self.sm() >= 32);
@@ -149,6 +161,8 @@ pub trait SSABuilder: Builder {
         dst
     }
 
+
+    // ── Floating-point arithmetic ───────────────────────────────────────
     fn fadd(&mut self, x: Src, y: Src) -> SSAValue {
         let dst = self.alloc_ssa(RegFile::GPR);
         self.push_op(OpFAdd {
@@ -232,6 +246,8 @@ pub trait SSABuilder: Builder {
         dst
     }
 
+
+    // ── Integer unary/comparison ───────────────────────────────────────
     fn iabs(&mut self, i: Src) -> SSAValue {
         let dst = self.alloc_ssa(RegFile::GPR);
         if self.sm() >= 70 {
@@ -253,6 +269,8 @@ pub trait SSABuilder: Builder {
         dst
     }
 
+
+    // ── Integer arithmetic ─────────────────────────────────────────────
     fn iadd(&mut self, x: Src, y: Src, z: Src) -> SSAValue {
         let dst = self.alloc_ssa(RegFile::GPR);
         if self.sm() >= 70 {
@@ -684,6 +702,8 @@ pub trait SSABuilder: Builder {
         }
     }
 
+
+    // ── Selection and conversion ───────────────────────────────────────
     fn sel(&mut self, cond: Src, x: Src, y: Src) -> SSAValue {
         assert!(cond.reference.is_predicate());
         assert!(x.is_predicate() == y.is_predicate());
