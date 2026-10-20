@@ -33,6 +33,9 @@ authors = ["ecoPrimals Project"]
 rust-version = "1.85"
 
 [workspace.dependencies]
+# Canonical ecosystem types (cellMembrane agglutinated types)
+cellmembrane-types = { path = "../../gardens/cellMembrane/crates/cellmembrane-types" }
+
 # Async runtime
 # EVOLUTION(pure-rust-tokio): tokio → mio → libc (epoll), socket2 → libc,
 # signal-hook-registry → libc. mio#1735 (rustix migration) was DECLINED by

@@ -20,30 +20,8 @@ use crate::service;
 
 pub use crate::config::compile_timeout;
 
-#[derive(Deserialize)]
-struct JsonRpcRequest {
-    jsonrpc: String,
-    method: String,
-    #[serde(default)]
-    params: serde_json::Value,
-    id: serde_json::Value,
-}
-
-#[derive(Serialize)]
-struct JsonRpcResponse {
-    jsonrpc: &'static str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    result: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<JsonRpcError>,
-    id: serde_json::Value,
-}
-
-#[derive(Serialize)]
-struct JsonRpcError {
-    code: i32,
-    message: String,
-}
+// Canonical JSON-RPC types from cellmembrane-types.
+use cellmembrane_types::{JsonRpcRequest, JsonRpcResponse};
 
 fn to_json(val: impl Serialize) -> Result<serde_json::Value, IpcServiceError> {
     serde_json::to_value(val).map_err(|e| IpcServiceError::internal(e.to_string()))
@@ -154,21 +132,8 @@ pub fn make_response(
     result: Result<serde_json::Value, IpcServiceError>,
 ) -> String {
     let resp = match result {
-        Ok(val) => JsonRpcResponse {
-            jsonrpc: "2.0",
-            result: Some(val),
-            error: None,
-            id,
-        },
-        Err(e) => JsonRpcResponse {
-            jsonrpc: "2.0",
-            result: None,
-            error: Some(JsonRpcError {
-                code: e.phase.jsonrpc_code(),
-                message: e.to_string(),
-            }),
-            id,
-        },
+        Ok(val) => JsonRpcResponse::success(id, val),
+        Err(e) => JsonRpcResponse::error(id, e.phase.jsonrpc_code(), e.to_string()),
     };
     serde_json::to_string(&resp).unwrap_or_else(|_| {
         r#"{"jsonrpc":"2.0","error":{"code":-32603,"message":"internal error"},"id":null}"#
@@ -212,12 +177,14 @@ where
         }
         let resp = match serde_json::from_str::<JsonRpcRequest>(trimmed) {
             Ok(req) => {
+                let id = req.id.unwrap_or(serde_json::Value::Null);
                 if req.jsonrpc == "2.0" {
-                    let result = dispatch_maybe_blocking(&req.method, req.params).await;
-                    make_response(req.id, result)
+                    let params = req.params.unwrap_or(serde_json::Value::Null);
+                    let result = dispatch_maybe_blocking(&req.method, params).await;
+                    make_response(id, result)
                 } else {
                     make_response(
-                        req.id,
+                        id,
                         Err(IpcServiceError::dispatch(format!(
                             "invalid jsonrpc version: {}",
                             req.jsonrpc

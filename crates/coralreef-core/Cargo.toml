@@ -32,6 +32,7 @@ required-features = []
 workspace = true
 
 [dependencies]
+cellmembrane-types = { workspace = true }
 coral-reef = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
 clap = { workspace = true }
